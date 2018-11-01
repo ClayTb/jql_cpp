@@ -3,11 +3,9 @@
 #include <stdexcept>      // std::out_of_range
 #include <vector>         // std::vector
 #include <unistd.h>
-#include "loguru.cpp"
 
 
 int main(int argc, char* argv[]) {
-    	loguru::init(argc, argv);
 
   std::vector<int> myvector(10);
   try {
