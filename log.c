@@ -19,11 +19,11 @@
 //unsigned char LOGFILE[50];
   
 //_Bool LogCreated = 0;   
-#define Log(level, format...) log(__FILE__, __LINE__, level, format)
+//#define Log(level, format...) log(__FILE__, __LINE__, level, format)
+void log(int level, const char *format...);
 
 std::string path;
 int initlog()
-//int main()
 {
     char *home = NULL;
     if((home = getenv("HOME")) == NULL)
@@ -64,7 +64,7 @@ int initlog()
 }
 
   
-void log(const char *filename, int line, int level, const char *format, ...)  
+void log(int level, const char *format...)  
 {  
     FILE *file;   
     //char buf[28];  
@@ -106,7 +106,8 @@ int main(void)
         return 1;
     }
     
-    Log(0, "ERROR: sigaction(): %s", strerror(errno));
-    Log(0, "test again");
+    //Log(0, "ERROR: sigaction(): %s", strerror(errno));
+    //Log(0, "test again");
+    log(0, "test again");
     
 }
