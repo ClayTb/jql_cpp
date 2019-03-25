@@ -12,6 +12,7 @@
 
    Implementation of readLine().
 */
+//只发送\n是可以的，因为在unix里，只有\n，对应十六进制是0x0a
 #include <unistd.h>
 #include <errno.h>
 #include "read_line.h"                  /* Declaration of readLine() */
