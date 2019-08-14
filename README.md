@@ -4,3 +4,5 @@ mosqui-test是关于mqtt的一个测试
 ping.c是一个使用c++，以及popen来把ping的结果打印出来  
 jsonp.c：c语言版本json解析，可以用在stm32上面   
 tkWifi.cpp：使用nmcli命令来实现wifi切换  
+check-tikong-wifi-exist.c 检查所有连接，看有没有tikong-wifi的名字，可以解析返回值字典里的key value  
+
