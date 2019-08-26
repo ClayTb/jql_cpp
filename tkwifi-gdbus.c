@@ -505,12 +505,15 @@ find_all_devices(GDBusProxy *proxy)
 	GError *error = NULL;
 	GVariant *ret;
 	char **paths;
+	gboolean found = FALSE;
 
 	/* Call ListConnections D-Bus method */
 	ret = g_dbus_proxy_call_sync (proxy,
 	                              "Get",
 								//g_variant_new ("(a{sa{sv}})", &connection_builder),
-	                              g_variant_new ("(ss)", &connection_builder),
+	                              g_variant_new ("(ss)", "org.freedesktop.NetworkManager","AllDevices"),
+	                              //g_variant_new ("(ss)", "org.freedesktop.NetworkManager","NetworkingEnabled"),
+	                              //g_variant_new ("(ss)", "org.freedesktop.NetworkManager","Version"),
 	                              G_DBUS_CALL_FLAGS_NONE, -1,
 	                              NULL, &error);
 	if (!ret) {
@@ -519,22 +522,31 @@ find_all_devices(GDBusProxy *proxy)
 		g_error_free (error);
 		return FALSE;
 	}
+    //g_print("%s\n", ret);
+	//const char *value = NULL;
+	//gboolean enabled = FALSE;
+	//GVariant *version_value;
+	//const char *version = NULL;
+	//g_variant_get (ret, "(v)", &version_value);
+	//g_variant_unref (ret);
+	//version = g_variant_get_string (version_value, NULL);
+	
+	//g_print(version); 
+	GVariant *device_value;
+	g_variant_get(ret, "(v)", &device_value);
+	g_variant_unref(ret);
+	g_variant_get (device_value, "(ao)", paths);
 
-	g_variant_get (ret, "(^ao)", &paths);
-	g_variant_unref (ret);
-    gboolean found = FALSE;
 
-	for (i = 0; paths[i]; i++)
+    
+
+	/*for (i = 0; paths[i]; i++)
     {
 
-        found = get_active_connection_details (paths[i]);
-        if(found == TRUE)
-        {
-            remove(paths[i]);
-        }       
+        g_print("%s\n", paths[i]);   
         
     }
-	g_strfreev (paths);
+	g_strfreev (paths);*/
     return found;
 }
 
