@@ -4,6 +4,7 @@
 #include <nm-dbus-interface.h>
 #include <NetworkManager.h>
 /*
+v1.0 2019-8-26
 gcc -Wall tkwifi-gdbus.c -o tkwifi-gdbus `pkg-config --cflags --libs libnm uuid`
 
 1. 检查所有连接，看有没有tikong-wifi的名字
@@ -230,7 +231,7 @@ out:
     return foundTk;
 }
 
-
+char PATH[100];
 
 static gboolean
 find_tk_wifi (GDBusProxy *proxy)
@@ -269,6 +270,7 @@ find_tk_wifi (GDBusProxy *proxy)
             found = get_active_connection_details (paths[i]);
             if(found == TRUE)
             {
+            	memcpy(PATH, paths[i], strlen(paths[i]));
                 goto OUT;
             }
 
@@ -498,15 +500,107 @@ connect_tk_wifi (GDBusProxy *proxy)
 	g_strfreev (paths);
     return found;
 }
+static gboolean 
+is_wifi(const char *obj_path)
+{
+    GDBusProxy *props_proxy;
+	GVariant *ret = NULL, *path_value = NULL;
+	//const char *path = NULL;
+	GError *error = NULL;
+	gboolean found = FALSE;
+
+
+	props_proxy = g_dbus_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+	                                             G_DBUS_PROXY_FLAGS_NONE,
+	                                             NULL,
+                                                 //"org.freedesktop.NetworkManager"
+	                                             NM_DBUS_SERVICE,
+	                                             obj_path,
+	 "org.freedesktop.DBus.Introspectable",
+	                                             NULL, NULL);
+	g_assert (props_proxy);
+
+	ret = g_dbus_proxy_call_sync (props_proxy,
+	                              "Introspect",
+	                              NULL,
+	                              G_DBUS_CALL_FLAGS_NONE, -1,
+	                              NULL, &error);
+	if (!ret) {
+		g_dbus_error_strip_remote_error (error);
+		g_warning ("Failed to get Introspect: %s\n",
+		           error->message);
+		g_error_free (error);
+        g_print("can't find %s\n", obj_path);
+		goto out;
+	}
+    const char *xml = NULL; 
+    //GVariant *value;
+	g_variant_get (ret, "(s)", &xml);
+	//g_variant_unref (ret);
+	//xml = g_variant_get_string (value, NULL);
+	//g_print(xml);
+
+	if(strstr(xml, "WirelessCapabilities") != NULL)
+	{
+		g_print ("%s is wifi interface\n", obj_path);
+		found = TRUE;
+	}
+
+out:
+	if (path_value)
+		g_variant_unref (path_value);
+	if (ret)
+		g_variant_unref (ret);
+	g_object_unref (props_proxy);
+    
+    return found;	
+}
+
+static gboolean
+enable_conn(const char *device_path)
+{
+	GDBusProxy *proxy;
+    gboolean found = FALSE;
+    GError *error = NULL;
+
+	/* Create a D-Bus proxy; NM_DBUS_* defined in nm-dbus-interface.h */
+	proxy = g_dbus_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+	                                       G_DBUS_PROXY_FLAGS_NONE,
+	                                       NULL,
+                                           // "org.freedesktop.NetworkManager"
+	                                       NM_DBUS_SERVICE,
+                                           //"/org/freedesktop/NetworkManager"
+	                                       NM_DBUS_PATH,                                          
+	                                       "org.freedesktop.NetworkManager",
+	                                       NULL, NULL);
+	g_assert (proxy != NULL);
+	GVariant *ret = NULL;
+    
+	ret = g_dbus_proxy_call_sync (proxy,
+                              "ActivateConnection",
+                              g_variant_new ("(ooo)", PATH,device_path,"/"),
+                              G_DBUS_CALL_FLAGS_NONE, -1,
+                              NULL, &error);
+    const char *value = NULL; 
+    //GVariant *value;
+	g_variant_get (ret, "(o)", &value);
+	g_print("return current %s\n", value);
+
+	g_object_unref (proxy);
+	//g_object_unref (ret);
+
+    return TRUE;
+}
+
 static gboolean
 find_all_devices(GDBusProxy *proxy)
 {
 	int i;
 	GError *error = NULL;
 	GVariant *ret;
-	char **paths;
+	//char **paths;
 	gboolean found = FALSE;
-
+//这里也可以用GetDevices来得到设备
 	/* Call ListConnections D-Bus method */
 	ret = g_dbus_proxy_call_sync (proxy,
 	                              "Get",
@@ -518,7 +612,7 @@ find_all_devices(GDBusProxy *proxy)
 	                              NULL, &error);
 	if (!ret) {
 		g_dbus_error_strip_remote_error (error);
-		g_print ("ListConnections failed: %s\n", error->message);
+		g_print ("get failed: %s\n", error->message);
 		g_error_free (error);
 		return FALSE;
 	}
@@ -526,27 +620,60 @@ find_all_devices(GDBusProxy *proxy)
 	//const char *value = NULL;
 	//gboolean enabled = FALSE;
 	//GVariant *version_value;
-	//const char *version = NULL;
+	//const char *version = NULL; 
+	//先要得到variant，然後再取
 	//g_variant_get (ret, "(v)", &version_value);
 	//g_variant_unref (ret);
 	//version = g_variant_get_string (version_value, NULL);
-	
 	//g_print(version); 
 	GVariant *device_value;
 	g_variant_get(ret, "(v)", &device_value);
+
 	g_variant_unref(ret);
-	g_variant_get (device_value, "(ao)", paths);
 
+	GVariantIter  *iter;
+	//GVariant * item;
+	//iter = g_variant_iter_new(device_value);
+	//g_variant_iter_init(&iter,device_value);
+	//先變成array數組
+	g_variant_get(device_value, "ao", &iter);
+	const char *path;
+	//int j = 0;
+	//然後從數組裏拿
+	while(g_variant_iter_loop(iter, "o", &path))
+	//g_variant_get_type_string(device_value);
+	//for (i = 0; i < g_variant_n_children(device_value); i++)
+	{
+		//g_variant_get_string(item, NULL);
+		//g_variant_lookup(item,);
+		//g_print("%i\n",j);
+		//j++;
+		g_print(path);
+		g_print("\n");
+		//這裏再去確認这个path是不是wifi接口
+		found = is_wifi(path);
+		//這裏這樣做的目的就是要去enable一個連接，而enable這個連接需要知道这个连接使用的接口的path。
+		if(found == TRUE)
+		{
+			enable_conn(path);
+		}
+	}
+	//凡是指針都要釋放
+	g_variant_iter_free(iter);
+	//gsize length = 0;
+	//paths = g_variant_get_bytestring_array (device_value, &length);
+	//g_variant_get (device_value, "a(o)", paths);
+	//printf("%s\n", device_value);
+//	for (i = 0; paths[i]; i++)	
+	//for (i = 0; i < 2; i++)
+	//{
+		//g_print(device_value[i]);
+	//}
 
+	//g_strfreev (paths);
+	//g_variant_unref(device_value);
     
 
-	/*for (i = 0; paths[i]; i++)
-    {
-
-        g_print("%s\n", paths[i]);   
-        
-    }
-	g_strfreev (paths);*/
     return found;
 }
 
