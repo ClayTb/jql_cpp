@@ -10,11 +10,70 @@ gcc -Wall tkwifi-gdbus.c -o tkwifi-gdbus `pkg-config --cflags --libs libnm uuid`
 1. 检查所有连接，看有没有tikong-wifi的名字
 2. 创建连接函数 addWifiConnection()
 3. 删除连接 remove_connection()
+4. disable wifi connection
 3. 连接wifi函数 connect_wifi()
 4. 断开wifi函数 disconn_wifi()
 5. 测试网络连通性函数 test_wifi()
 */
 
+/*
+1. 找到wifi设备path
+2. 调用path/DEVICES/1使用Disconnect，可以断连wifi
+3. 然后再连接特定的连接
+4. 使用完之后需要再断连wifi，而不只是断连tikong的SSID
+ping可以使用之前写过的ping代码
+*/
+
+//#include <iostream>
+//#include <stdexcept>
+//#include <stdio.h>
+//#include <string>
+
+/*
+std::string exec(const char* cmd) {
+    char buffer[128];
+    std::string result = "";
+    FILE* pipe = popen(cmd, "r");
+    if (!pipe) throw std::runtime_error("popen() failed!");
+    try {
+        while (fgets(buffer, sizeof buffer, pipe) != NULL) {
+            result += buffer;
+        }
+    } catch (...) {
+        pclose(pipe);
+        throw;
+    }
+    pclose(pipe);
+    return result;
+}
+
+
+int main(int argc, char *argv[])
+{
+	std::cout << exec("ping -c 1 www.baidu.com 2>&1");
+	return 0;
+}*/
+#include <stdlib.h>
+
+#define TKIP "192.168.1.150"
+static gboolean
+check_conn()
+{
+	int ret = -1;
+	ret = system("ping 192.168.1.150 -c 1");
+	if(ret == 0)
+	{
+		return TRUE;
+	}
+	else
+	{
+		return FALSE;
+	}
+} 
+
+
+
+#define SSID "shanzhu_5G"
 char *
 nm_utils_uuid_generate (void)
 {
@@ -207,7 +266,7 @@ get_active_connection_details (const char *obj_path)
     
     gboolean foundTk = FALSE;
 	/* Dump the configuration to stdout */
-	if(strstr(id, "tikong-wifi") != NULL)
+	if(strstr(id, SSID) != NULL)
 	{
 		g_print ("%s <=> %s\n", id, obj_path);
 		g_print ("%s <=> %s\n", id, type);
@@ -562,6 +621,7 @@ enable_conn(const char *device_path)
 	GDBusProxy *proxy;
     gboolean found = FALSE;
     GError *error = NULL;
+    g_print("then connect %s\n", SSID);
 
 	/* Create a D-Bus proxy; NM_DBUS_* defined in nm-dbus-interface.h */
 	proxy = g_dbus_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
@@ -581,10 +641,44 @@ enable_conn(const char *device_path)
                               g_variant_new ("(ooo)", PATH,device_path,"/"),
                               G_DBUS_CALL_FLAGS_NONE, -1,
                               NULL, &error);
-    const char *value = NULL; 
+
+
+	g_object_unref (proxy);
+	//g_object_unref (ret);
+
+    return TRUE;
+}
+
+static gboolean
+disconn_wifi(const char *device_path)
+{
+
+	GDBusProxy *proxy;
+    //gboolean found = FALSE;
+    GError *error = NULL;
+    g_print("first diconn wifi\n");
+
+	/* Create a D-Bus proxy; NM_DBUS_* defined in nm-dbus-interface.h */
+	proxy = g_dbus_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+	                                       G_DBUS_PROXY_FLAGS_NONE,
+	                                       NULL,
+                                           // "org.freedesktop.NetworkManager"
+	                                       NM_DBUS_SERVICE,
+	                                       device_path,                                          
+	                                       "org.freedesktop.NetworkManager.Device",
+	                                       NULL, NULL);
+	g_assert (proxy != NULL);
+	GVariant *ret = NULL;
+    
+	ret = g_dbus_proxy_call_sync (proxy,
+                              "Disconnect",
+                              NULL,
+                              G_DBUS_CALL_FLAGS_NONE, -1,
+                              NULL, &error);
+    //const char *value = NULL; 
     //GVariant *value;
-	g_variant_get (ret, "(o)", &value);
-	g_print("return current %s\n", value);
+	//g_variant_get (ret, "(o)", &value);
+	//g_print("return current %s\n", value);
 
 	g_object_unref (proxy);
 	//g_object_unref (ret);
@@ -652,10 +746,23 @@ find_all_devices(GDBusProxy *proxy)
 		g_print("\n");
 		//這裏再去確認这个path是不是wifi接口
 		found = is_wifi(path);
+
 		//這裏這樣做的目的就是要去enable一個連接，而enable這個連接需要知道这个连接使用的接口的path。
 		if(found == TRUE)
 		{
+			//找到wifi接口的path之后，先disconn连接
+			disconn_wifi(path);
+			sleep(5);
 			enable_conn(path);
+			found = check_conn();
+			if(TRUE == found)
+			{
+				g_print("network is OK\n");
+			}
+			else
+			{
+				g_print("network isn't OK\n");
+			}
 		}
 	}
 	//凡是指針都要釋放

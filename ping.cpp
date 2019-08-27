@@ -22,6 +22,6 @@ std::string exec(const char* cmd) {
 
 int main(int argc, char *argv[])
 {
-	std::cout << exec("ping -c 1 www.baidu2.com 2>&1");
+	std::cout << exec("ping -c 1 www.baidu.com 2>&1");
 	return 0;
 }
