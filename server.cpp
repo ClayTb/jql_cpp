@@ -2,7 +2,8 @@
     > File Name: Server.cpp
     > Author: MattJi
     > Created Time: 2019-12-18
-brief: 
+	> brief:
+	>g++ server.cpp -o server -lpthread 
  ************************************************************************/
 #include<netinet/in.h>   // sockaddr_in
 #include<sys/types.h>    // socket
@@ -179,7 +180,7 @@ void Server::Recv(int nums)
 		    log(mmap[fd].second.hostname+" online\n");
 		}
                 
-	        cout << "Received heart-beat from client.\n";
+	        //cout << "Received heart-beat from client.\n";
 	    }
  
             if(close_conn)  // 当前这个连接有问题，关闭它

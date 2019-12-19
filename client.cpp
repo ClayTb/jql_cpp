@@ -2,6 +2,7 @@
     > File Name: Client.cpp
     > Author: MattJi
     > Created Time: 2019-12-18
+	> nohup ./client >/dev/null 2>&1 &
  ************************************************************************/
 #include<netinet/in.h>   // sockaddr_in
 #include<sys/types.h>    // socket
@@ -148,7 +149,7 @@ int main()
         getline(cin, msg);
         if(msg == "exit")
             break;
-        cout << "msg\n";
+        //cout << "msg\n";
     }
     return 0;
 }
