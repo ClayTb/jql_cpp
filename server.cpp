@@ -2,8 +2,8 @@
     > File Name: Server.cpp
     > Author: MattJi
     > Created Time: 2019-12-18
-	> brief:
-	>g++ server.cpp -o server -lpthread 
+	> brief: 用来检测客户端是否离线，使用curl和企业微新对接
+	> g++ server.cpp -o server -lpthread 
  ************************************************************************/
 #include<netinet/in.h>   // sockaddr_in
 #include<sys/types.h>    // socket
@@ -20,10 +20,36 @@
 #include<cstdlib>
 #include<cstdio>
 #include<cstring>
+#include <thread>
+#include <curl/curl.h>
 using namespace std;
 #define BUFFER_SIZE 1024
+#define URL "https"
  
- 
+
+int offline(void)
+{
+    string data="";
+    CURL *curl;
+    CURLcode res;
+    curl = curl_easy_init();
+    if(curl)
+    {
+        curl_easy_setopt(curl, CURLOPT_URL, URL);
+        curl_easy_setopt(curl,)
+         while(true)
+        {
+        data = ooflineQ.pop();
+        char* data1 = curl_easy_easy_escape(curl, data.c_str(), 0);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data1);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(data1));
+        res = curl_eays_perform(curl);
+        }
+
+    }
+       curl_easy_cleanup(curl);
+    return 0;
+} 
 
 struct RECORD
 {
@@ -253,6 +279,8 @@ void* heart_handler(void* arg)
             if(it->second.second.count == 5)   // 3s*5没有收到心跳包，判定客户端掉线
             {
                 cout << "The client " << it->second.second.hostname << " has be offline.\n";
+                string data = it->second.second.hostname+" has be offline.
+                offlineQ.push();
                 log(it->second.second.hostname+" has be offline.\n");
                 int fd = it->first;
                 close(fd);            // 关闭该连接
@@ -285,10 +313,11 @@ int main()
     server.Bind();
     server.Listen();
     server.Run();
+    thread (oofline).detach();
     while(1)
     {
         string msg;
-	cout << "getline";
+	    cout << "getline";
         getline(cin, msg);
         if(msg == "exit")
             break;
