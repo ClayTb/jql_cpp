@@ -27,6 +27,7 @@ struct PACKET_HEAD
     int length;
 };
  
+bool reconn = true;
 #include <iostream>
 #include <stdexcept>
 #include <stdio.h>
@@ -97,9 +98,14 @@ void Client::Connect()
     if(connect(fd, (struct sockaddr*)&server_addr, server_addr_len) < 0)
     {
         cout << "Can not Connect to Server IP!";
-        exit(1);
+        close(fd);
+        //exit(1);
     }
-    cout << "Connect to Server successfully." << endl;
+    else
+    {
+        cout << "Connect to Server successfully." << endl;
+        reconn = false;
+    }
 }
  
 void Client::Run()
@@ -119,16 +125,30 @@ void* send_heart(void* arg)
     cout << "The heartbeat sending thread started.\n";
     Client* c = (Client*)arg;
     int count = 0;  // 测试
-    while(1) 
-    {
-        //PACKET_HEAD head;
-       // head.type = HEART;
-        //head.hostname = exec("hostname");
-	//cout << head.hostname << endl;
-        //head.length = 0;    
 	string data = exec("hostname");
-        send(c->fd, data.c_str(), strlen(data.c_str())-1, 0);
+    int ret = -1;
+    char recv_buf[10];
+    memset(recv_buf, 0, sizeof recv_buf);
+	struct timeval tv;
+    tv.tv_sec = 10;
+    tv.tv_usec = 0;
+    setsockopt(c->fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+    while(1) 
+    {   
+        send(c->fd, data.c_str(), strlen(data.c_str())-1, MSG_NOSIGNAL);
+		ret = recv(c->fd, recv_buf, sizeof(recv_buf), 0);
         //sleep(3);     // 定时3秒
+        if(ret < 1)
+		{
+			//perror("recv ");
+			reconn = true;
+			c->~Client();
+			break;
+		}
+		else
+		{
+			//cout << recv_buf << endl;
+		}
         sleep(3);     // 定时5秒
         //++count;      // 测试：发送15次心跳包就停止发送
         //if(count > 15)
@@ -139,18 +159,36 @@ void* send_heart(void* arg)
  
 int main()
 {
+#if 0
+    while(1)
+    {
+        if(reconn)
+        {
+            cout << "1"<< endl;
+            Client client("120.78.152.73", 15000);
+            //Client client("127.0.0.1", 15000);
+            client.Connect();
+            //if(!reconn)
+                client.Run();
+        }
+        sleep(3);
+    }
+ #endif   
+    #if 1
+Start:
     Client client("120.78.152.73", 15000);
     //Client client("127.0.0.1", 15000);
     client.Connect();
-    client.Run();
+    if(!reconn)
+        client.Run();
+                
     while(1)
     {
-        string msg;
-        getline(cin, msg);
-        if(msg == "exit")
-            break;
-        //cout << "msg\n";
+        sleep(3);
+        if(reconn)
+            goto Start;
     }
+    #endif
     return 0;
 }
 

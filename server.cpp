@@ -21,12 +21,12 @@
 #include<cstdio>
 #include<cstring>
 #include <thread>
-#include <curl/curl.h>
+//#include <curl/curl.h>
 using namespace std;
 #define BUFFER_SIZE 1024
 #define URL "https"
  
-
+#if 0
 int offline(void)
 {
     string data="";
@@ -50,6 +50,24 @@ int offline(void)
        curl_easy_cleanup(curl);
     return 0;
 } 
+#endif 
+std::string exec(const char* cmd) {
+    char buffer[128];
+    std::string result = "";
+    FILE* pipe = popen(cmd, "r");
+    if (!pipe) throw std::runtime_error("popen() failed!");
+    try {
+        while (fgets(buffer, sizeof buffer, pipe) != NULL) {
+            result += buffer;
+        }
+    } catch (...) {
+        pclose(pipe);
+        throw;
+    }
+    pclose(pipe);
+    return result;
+}
+
 
 struct RECORD
 {
@@ -192,7 +210,7 @@ void Server::Recv(int nums)
            // _recv = recv(fd, &head, sizeof(head), 0);   // 先接受包头            
 	     _recv = recv(fd, recv_buffer, sizeof(recv_buffer), 0);   // 先接受包头
 	//	cout << recv_buffer <<endl;
-            if(_recv < 1)
+        if(_recv < 1)
 	    {
                 close_conn = true;
                 //cout << _recv << endl;
@@ -203,9 +221,14 @@ void Server::Recv(int nums)
 	        if(mmap[fd].second.hostname.empty())
 		{
 		    mmap[fd].second.hostname = recv_buffer;
-		    log(mmap[fd].second.hostname+" online\n");
+		    
+		    string host = mmap[fd].second.hostname+" online\n";
+		    log(host);
+		    string data1 = "curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=1b3b3ed3-c3e3-464e-aaea-b7f0c75bf5da' -H 'Content-Type: application/json' -d '{\"msgtype\": \"text\",\"text\": {\"content\":\"" + host + "\"}}'";
+            exec(data1.c_str());
 		}
-                
+               send(fd, "rsp", 3, MSG_NOSIGNAL);   
+               //send(fd, "rsp", 3, 0);   
 	        //cout << "Received heart-beat from client.\n";
 	    }
  
@@ -279,8 +302,10 @@ void* heart_handler(void* arg)
             if(it->second.second.count == 5)   // 3s*5没有收到心跳包，判定客户端掉线
             {
                 cout << "The client " << it->second.second.hostname << " has be offline.\n";
-                string data = it->second.second.hostname+" has be offline.
-                offlineQ.push();
+                string data = it->second.second.hostname+" has be offline.";
+		    string data1 = "curl 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=1b3b3ed3-c3e3-464e-aaea-b7f0c75bf5da' -H 'Content-Type: application/json' -d '{\"msgtype\": \"text\",\"text\": {\"content\":\"" + data + "\"}}'";
+            exec(data1.c_str());
+                //offlineQ.push();
                 log(it->second.second.hostname+" has be offline.\n");
                 int fd = it->first;
                 close(fd);            // 关闭该连接
@@ -313,7 +338,8 @@ int main()
     server.Bind();
     server.Listen();
     server.Run();
-    thread (oofline).detach();
+    //thread (offline).detach();
+    
     while(1)
     {
         string msg;
