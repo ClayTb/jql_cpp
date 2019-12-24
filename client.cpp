@@ -3,6 +3,8 @@
     > Author: MattJi
     > Created Time: 2019-12-18
 	> nohup ./client >/dev/null 2>&1 &
+	> 已经加入到电梯控制的startup.bash里
+	> 加入电梯检测程序
  ************************************************************************/
 #include<netinet/in.h>   // sockaddr_in
 #include<sys/types.h>    // socket

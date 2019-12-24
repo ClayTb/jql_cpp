@@ -183,10 +183,10 @@ void Server::Accept()
  
     cout << ip << " was accepted.\n";
     //log(ip+" new connection was accepted\n");
-    //struct RECORD rec={
-//		count:0, 
-//		hostname: ""};
-   // mmap.insert(make_pair(new_fd, make_pair(ip, rec)));
+    struct RECORD rec={
+		count:0, 
+		hostname: ""};
+    mmap.insert(make_pair(new_fd, make_pair(ip, rec)));
  
     // 将新建立的连接的fd加入master_set
     FD_SET(new_fd, &master_set);
