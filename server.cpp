@@ -5,6 +5,7 @@
 	> brief: 用来检测客户端是否离线，使用curl和企业微新对接
 	> g++ server.cpp -o server -lpthread 
  ************************************************************************/
+//最终没有使用这个版本
 #include<netinet/in.h>   // sockaddr_in
 #include<sys/types.h>    // socket
 #include<sys/socket.h>   // socket
